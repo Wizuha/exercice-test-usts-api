@@ -2,13 +2,25 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Get;
+
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
+#[ApiResource(
+    operations: [
+    new Post(uriTemplate:'/user/{id}/add-role'),
+    new Get(uriTemplate:'/user/companies'),
+    ]
+)]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -30,6 +42,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column]
     private ?string $password = null;
+
+    /**
+     * @var Collection<int, Company>
+     */
+    #[ORM\ManyToMany(targetEntity: Company::class, inversedBy: 'users')]
+    private Collection $company;
+
+    public function __construct()
+    {
+        $this->company = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -66,7 +89,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
         $roles[] = 'ROLE_USER';
 
         return array_unique($roles);
@@ -104,5 +126,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    /**
+     * @return Collection<int, company>
+     */
+    public function getcompany(): Collection
+    {
+        return $this->company;
+    }
+
+    public function addCompany(Company $company): static
+    {
+        if (!$this->company->contains($company)) {
+            $this->company->add($company);
+        }
+
+        return $this;
+    }
+
+    public function removeCompany(Company $company): static
+    {
+        $this->company->removeElement($company);
+
+        return $this;
     }
 }
