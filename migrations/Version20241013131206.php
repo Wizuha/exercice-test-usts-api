@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20241009151309 extends AbstractMigration
+final class Version20241013131206 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -20,16 +20,14 @@ final class Version20241009151309 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE project ADD company_id INT NOT NULL');
-        $this->addSql('ALTER TABLE project ADD CONSTRAINT FK_2FB3D0EE979B1AD6 FOREIGN KEY (company_id) REFERENCES company (id)');
-        $this->addSql('CREATE INDEX IDX_2FB3D0EE979B1AD6 ON project (company_id)');
+        $this->addSql('ALTER TABLE company ADD role VARCHAR(255) NOT NULL');
+        $this->addSql('ALTER TABLE user_company ADD role VARCHAR(50) NOT NULL');
     }
 
     public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE project DROP FOREIGN KEY FK_2FB3D0EE979B1AD6');
-        $this->addSql('DROP INDEX IDX_2FB3D0EE979B1AD6 ON project');
-        $this->addSql('ALTER TABLE project DROP company_id');
+        $this->addSql('ALTER TABLE company DROP role');
+        $this->addSql('ALTER TABLE user_company DROP role');
     }
 }

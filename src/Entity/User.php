@@ -9,17 +9,14 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
-use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Get;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ApiResource(
-    operations: [
-    new Post(uriTemplate:'/user/{id}/add-role'),
-    new Get(uriTemplate:'/user/companies'),
-    ]
+    normalizationContext: ['groups'=>['read:users']],
 )]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -29,12 +26,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Groups(['read:usercompany', 'read:user'])]
     private ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
+    #[Groups(['read:usercompany', 'read:user'])]
     private array $roles = [];
 
     /**
@@ -44,14 +43,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $password = null;
 
     /**
-     * @var Collection<int, Company>
+     * @var Collection<int, UserCompany>
      */
-    #[ORM\ManyToMany(targetEntity: Company::class, inversedBy: 'users')]
-    private Collection $company;
+    
+    #[ORM\OneToMany(targetEntity: UserCompany::class, mappedBy: 'user', orphanRemoval: true)]
+    #[Groups(['read:usercompanies'])]
+    private Collection $userCompanies;
+
+    #[ORM\ManyToOne(inversedBy: 'user')]
+    private ?Company $company = null;
 
     public function __construct()
     {
-        $this->company = new ArrayCollection();
+        $this->userCompanies = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -129,25 +133,43 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * @return Collection<int, company>
+     * @return Collection<int, UserCompany>
      */
-    public function getcompany(): Collection
+    public function getUserCompanies(): Collection
     {
-        return $this->company;
+        return $this->userCompanies;
     }
 
-    public function addCompany(Company $company): static
+    public function addUserCompany(UserCompany $userCompany): static
     {
-        if (!$this->company->contains($company)) {
-            $this->company->add($company);
+        if (!$this->userCompanies->contains($userCompany)) {
+            $this->userCompanies->add($userCompany);
+            $userCompany->setUser($this);
         }
 
         return $this;
     }
 
-    public function removeCompany(Company $company): static
+    public function removeUserCompany(UserCompany $userCompany): static
     {
-        $this->company->removeElement($company);
+        if ($this->userCompanies->removeElement($userCompany)) {
+            // set the owning side to null (unless already changed)
+            if ($userCompany->getUser() === $this) {
+                $userCompany->setUser(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getCompany(): ?Company
+    {
+        return $this->company;
+    }
+
+    public function setCompany(?Company $company): static
+    {
+        $this->company = $company;
 
         return $this;
     }

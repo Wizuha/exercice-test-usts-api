@@ -8,20 +8,16 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Put;
-use ApiPlatform\Metadata\Delete;
 
 #[ORM\Entity(repositoryClass: CompanyRepository::class)]
 #[ApiResource(
-    operations: [
-        new GetCollection(),
-        new Post(),
-        new Get(),
-        new Post(uriTemplate: '/companies/{id}/add-user')
-    ]
+    // operations: [
+    //     new Get(),
+    // ],
+
 )] 
 class Company
 {
@@ -30,11 +26,9 @@ class Company
     #[ORM\Column]
     private ?int $id = null;
 
-    #[Assert\Unique]
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[Assert\Unique]
     #[ORM\Column(length:14)]
     private ?string $siret = null;
     
@@ -47,16 +41,21 @@ class Company
     #[ORM\OneToMany(targetEntity: Project::class, mappedBy: 'company', cascade: ['persist'])]
     private Collection $projects;
 
+    #[ORM\OneToMany(targetEntity: UserCompany::class, mappedBy: 'company', orphanRemoval: true)]
+    private Collection $userCompanies;
+
     /**
      * @var Collection<int, User>
      */
-    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'company',cascade: ['persist'])]
-    private Collection $users;
+    #[Assert\NotBlank]
+    #[ORM\OneToMany(targetEntity: User::class, mappedBy: 'company')]
+    private Collection $user;
 
     public function __construct()
     {
         $this->projects = new ArrayCollection();
-        $this->users = new ArrayCollection();
+        $this->user = new ArrayCollection();
+        $this->userCompanies = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -108,6 +107,14 @@ class Company
         return $this->projects;
     }
 
+     /**
+     * @return Collection<int, UserCompany>
+     */
+    public function getUserCompanies(): Collection
+    {
+        return $this->userCompanies;
+    }
+
     public function addProject(Project $project): static
     {
         if (!$this->projects->contains($project)) {
@@ -133,27 +140,35 @@ class Company
     /**
      * @return Collection<int, User>
      */
-    public function getUsers(): Collection
+    public function getUser(): Collection
     {
-        return $this->users;
+        return $this->user;
     }
 
-    public function addUser(User $user): static
+    public function addUser(User $user, string $role): static
     {
-        if (!$this->users->contains($user)) {
-            $this->users->add($user);
-            $user->addCompany($this);
+        if (!$this->user->contains($user)) {
+            $userCompany = new UserCompany();
+            $userCompany->setUser($user);
+            $userCompany->setCompany($this);
+            $userCompany->setRole($role);
+
+            $this->user->add($user);
+            $this->userCompanies->add($userCompany);
+            $this->setCompany($this);
         }
 
         return $this;
     }
-
+    
     public function removeUser(User $user): static
     {
-        if ($this->users->removeElement($user)) {
-            $user->removeCompany($this);
+        if ($this->user->removeElement($user)) {
+            if ($user->getCompany() === $this) {
+                $user->setCompany(null);
+            }
         }
-
+    
         return $this;
     }
 }
