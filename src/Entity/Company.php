@@ -11,13 +11,31 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Put;
 
 #[ORM\Entity(repositoryClass: CompanyRepository::class)]
 #[ApiResource(
-    // operations: [
-    //     new Get(),
-    // ],
-
+    operations: [
+        new Post(
+            uriTemplate: '/companies',
+            denormalizationContext:['groups'=> ['write:create_company']],
+            validationContext: ['groups' => ['create_company']]
+        ),
+        new Get( 
+            uriTemplate: '/companies/{id}',
+            normalizationContext: ['groups'=>['info_company']]
+        ),
+        new Patch(
+            uriTemplate:'/companies/{id}',
+            denormalizationContext:['groups'=>['write:add_user']]
+        ),
+        new Put(
+            uriTemplate:'/companies/{id}',
+            denormalizationContext:['groups'=>['write:update']],
+            normalizationContext:['groups'=>['read:update']]
+        )
+        ]
 )] 
 class Company
 {
@@ -27,12 +45,17 @@ class Company
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['info_company','write:update','read:update','write:create_company'])]
     private ?string $name = null;
 
-    #[ORM\Column(length:14)]
+    #[ORM\Column(length:14 , nullable: true)]
+    #[Assert\NotBlank(groups: ['create_company'])]
+    #[Groups(['info_company','write:create_company','read:update','write:update'])]
     private ?string $siret = null;
     
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(groups: ['create_company'])]
+    #[Groups(['info_company','write:update','read:update','write:create_company'])]
     private ?string $adress = null;
 
     /**
@@ -49,6 +72,7 @@ class Company
      */
     #[Assert\NotBlank]
     #[ORM\OneToMany(targetEntity: User::class, mappedBy: 'company')]
+    #[Groups(['user','write:add_user','info_company'])]
     private Collection $user;
 
     public function __construct()

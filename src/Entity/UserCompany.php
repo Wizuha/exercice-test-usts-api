@@ -34,11 +34,11 @@ class UserCompany
 
     #[ORM\ManyToOne(inversedBy: 'userCompanies')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['read:usercompany','write:user'])]
+    #[Groups(['user'])]
     private ?User $user = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['read:usercompany','write:user'])]
+    #[Groups(['read:user'],['write:add_user'])]
     private ?string $role = null;
 
     public function getId(): ?int
@@ -70,7 +70,7 @@ class UserCompany
         return $this;
     }
     
-    #[Assert\Choice(choices: ['admin', 'manager', 'consultant'], message: 'Invalid role')]
+    #[Assert\Choice(choices: ['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_CONSULTANT'], message: 'Invalid role')]
     public function getRole(): ?string
     {
         return $this->role;
